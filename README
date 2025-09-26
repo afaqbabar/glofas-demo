@@ -1,0 +1,10 @@
+# GloFAS Bangladesh Demo
+
+Tiny FastAPI service and scripts to download GloFAS historical data (EWDS),
+and generate overview PNGs for June 2012–2022 over a Bangladesh bbox.
+
+## Quick start
+```bash
+source /home/lenovo/flood/fastapi-env/bin/activate
+uvicorn app.main:app --host 0.0.0.0 --port 8010
+# POST /download, POST /overview, GET /image/{png}
