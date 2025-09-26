@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+
+# venvs
+fastapi-env/
+.venv/
+
+# data/cache/outputs
+cache/
+*.grib
+*.idx
+*.nc
+*.png
+
+# editor
+.vscode/
+.idea/
