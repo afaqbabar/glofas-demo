@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 CACHE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "cache"))
 os.makedirs(CACHE, exist_ok=True)
 
-BD_GRIB = os.path.join(CACHE, "glofas-2012_2022_BD.grib")
+BD_GRIB = os.path.join(CACHE, "glofas-2012_2024_BD.grib")
 
 def download_bangladesh_if_missing() -> str:
-    """Download June 2012–2022 Bangladesh GRIB into cache/, idempotent."""
+    """Download June 2012–2023 Bangladesh GRIB into cache/, idempotent."""
     if os.path.isfile(BD_GRIB) and os.path.getsize(BD_GRIB) > 0:
         return BD_GRIB
     c = cdsapi.Client()
@@ -20,7 +20,7 @@ def download_bangladesh_if_missing() -> str:
             "hydrological_model": ["lisflood"],
             "product_type": ["consolidated"],
             "variable": ["river_discharge_in_the_last_24_hours"],
-            "hyear": [f"{y}" for y in range(2012, 2023)],
+            "hyear": [f"{y}" for y in range(2012, 2024)],
             "hmonth": ["06"],
             "hday": [f"{d:02d}" for d in range(1, 31)],
             "data_format": "grib2",
@@ -33,7 +33,7 @@ def download_bangladesh_if_missing() -> str:
 def _pick_var(ds):
     return "dis24" if "dis24" in ds.data_vars else ("mdis24" if "mdis24" in ds.data_vars else list(ds.data_vars)[0])
 
-def make_overview_maps(input_path: str = BD_GRIB, target_year: int = 2022):
+def make_overview_maps(input_path: str = BD_GRIB, target_year: int = 2024):
     """Create two PNGs in cache/ and return their absolute paths."""
     ds = xr.open_dataset(input_path, engine="cfgrib")
     var = _pick_var(ds)
@@ -46,7 +46,7 @@ def make_overview_maps(input_path: str = BD_GRIB, target_year: int = 2022):
     plt.figure(figsize=(7.8, 6))
     im = plt.pcolormesh(LON, LAT, mean_all.values, shading="auto")
     cb = plt.colorbar(im, shrink=0.85); cb.set_label("Mean discharge (m³/s, June)")
-    plt.title("GloFAS (historical) — Bangladesh\nMean June discharge (2012–2022)")
+    plt.title("GloFAS (historical) — Bangladesh\nMean June discharge (2012–2024)")
     plt.xlabel("Lon"); plt.ylabel("Lat"); plt.tight_layout()
     plt.savefig(out1, dpi=150); plt.close()
 

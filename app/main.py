@@ -8,7 +8,7 @@ from .glofas_demo import download_bangladesh_if_missing, make_overview_maps, CAC
 app = FastAPI(title="GloFAS Bangladesh Demo API", version="0.1.0")
 
 class OverviewReq(BaseModel):
-    target_year: int = 2022
+    target_year: int = 2023
     # show None in the docs instead of "string", and treat "string" as empty
     input_path: str | None = Field(default=None, examples=[None])
 
