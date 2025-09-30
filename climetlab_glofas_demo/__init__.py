@@ -19,7 +19,7 @@ def _hist_request(years, months, days, area, system_version="version_4_0", model
 
 class PKAugustHistorical(Dataset):
     """Pakistan August (2012–2024) GloFAS historical — matches your demo defaults."""
-    name = "glofas-bd-june-historical"
+    name = "glofas-pk-august-historical"
     home_page = "https://github.com/afaqbabar/glofas-demo"
     description = "Convenience dataset for Pakistan August GloFAS historical tiles."
 
