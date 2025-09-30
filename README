@@ -8,3 +8,160 @@ and generate overview PNGs for June 2012–2022 over a Pakistan box.
 #source venv
 uvicorn app.main:app --host 0.0.0.0 --port 8010
 # POST /download, POST /overview, GET /image/{png}
+
+Dataset plugin (CliMetLab)
+
+This repo can include a tiny CliMetLab dataset plugin so you can fetch GloFAS tiles with a friendly name like:
+
+import climetlab as cml
+xr = cml.load_dataset("glofas-bd-june-historical").to_xarray(engine="cfgrib")
+
+1) Create the plugin package
+
+From the repo root:
+
+mkdir -p climetlab_glofas_demo
+cat > climetlab_glofas_demo/__init__.py <<'PY'
+import climetlab as cml
+from climetlab import Dataset
+
+def _hist_request(years, months, days, area, system_version="version_4_0", model="lisflood"):
+    return {
+        "system_version": system_version,
+        "hydrological_model": model,
+        "product_type": "consolidated",
+        "variable": "river_discharge_in_the_last_24_hours",
+        "hyear": [str(y) for y in years],
+        "hmonth": [f"{m:02d}" for m in months],
+        "hday": [f"{d:02d}" for d in days],
+        "data_format": "grib2",
+        "download_format": "unarchived",
+        "area": area,  # [North, West, South, East]
+    }
+
+class BDJuneHistorical(Dataset):
+    """Bangladesh June (2012–2022) GloFAS historical — matches API defaults."""
+    name = "glofas-bd-june-historical"
+    home_page = "https://github.com/afaqbabar/glofas-demo"
+    description = "Convenience dataset for Bangladesh June GloFAS historical tiles."
+
+    def __init__(self, start=2012, end=2022, area=(30, 85, 20, 95)):
+        years = range(int(start), int(end) + 1)
+        req = _hist_request(years=years, months=[6], days=range(1, 31), area=list(area))
+        self.source = cml.load_source("cds", "cems-glofas-historical", req)
+
+    def to_xarray(self, **kwargs):
+        return self.source.to_xarray(**kwargs)
+
+class GlofasHistorical(Dataset):
+    """Generic GloFAS historical loader with friendly params."""
+    name = "glofas-generic-historical"
+    home_page = "https://github.com/afaqbabar/glofas-demo"
+    description = "Generic GloFAS historical via CDS/EWDS (consolidated)."
+
+    def __init__(self,
+                 start=2012, end=2022,
+                 months=(6,), days=None,
+                 area=(30, 85, 20, 95),
+                 system_version="version_4_0",
+                 hydrological_model="lisflood"):
+        years = range(int(start), int(end) + 1)
+        if days is None:
+            days = range(1, 32)  # CDS ignores invalid dates per month
+        req = _hist_request(years=years, months=[int(m) for m in months], days=days,
+                            area=list(area), system_version=system_version, model=hydrological_model)
+        self.source = cml.load_source("cds", "cems-glofas-historical", req)
+
+    def to_xarray(self, **kwargs):
+        return self.source.to_xarray(**kwargs)
+PY
+
+2) Register the plugin (entry points)
+
+Add (or update) pyproject.toml in the repo root so only this package is installed:
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "climetlab-glofas-demo"
+version = "0.0.1"
+description = "CliMetLab dataset helpers for GloFAS tiles used in glofas-demo"
+requires-python = ">=3.9"
+
+[tool.setuptools]
+packages = ["climetlab_glofas_demo"]   # do not package app/, cache/, etc.
+
+[project.entry-points."climetlab.datasets"]
+glofas-bd-june-historical = "climetlab_glofas_demo:BDJuneHistorical"
+glofas-generic-historical = "climetlab_glofas_demo:GlofasHistorical"
+
+3) Install & ARM-friendly dependencies
+
+On Raspberry Pi we avoid heavy bundled binaries. In your venv:
+
+source fastapi-env/bin/activate
+
+# Install your plugin (editable)
+pip install -e .
+
+# Install CliMetLab WITHOUT pulling big binary deps; add light deps explicitly
+pip install --no-deps climetlab==0.23.2
+pip install filelock tqdm pyyaml requests cfgrib xarray numpy
+
+# If you see "ModuleNotFoundError: ecmwf.opendata", either install it…
+pip install ecmwf-opendata
+# …or disable mirrors for this session:
+# export CLIMETLAB_MIRRORS=""
+
+
+Also ensure ~/.cdsapirc is configured with your CDS/EWDS url, key (UID:APIKEY).
+
+4) Use it
+import climetlab as cml
+
+# Bangladesh June (2012–2022), matches API default area/period
+xr_bd = cml.load_dataset("glofas-bd-june-historical").to_xarray(engine="cfgrib")
+
+# Pakistan August (example): 2015–2024, wide PK bbox [N, W, S, E]
+xr_pk = cml.load_dataset(
+    "glofas-generic-historical",
+    start=2015, end=2024, months=(8,),
+    area=(37.5, 60.0, 23.0, 77.5)
+).to_xarray(engine="cfgrib")
+
+
+Data are cached in ~/.cache/climetlab; repeat calls don’t re-download.
+
+Variable name is typically dis24 (fallbacks handled by cfgrib and your analysis code).
+
+5) Common tweaks
+
+Change dataset defaults (years, months, area) by editing the class __init__ signatures.
+
+Add more dataset classes (e.g., PKAugustHistorical) and register them by adding new lines under [project.entry-points."climetlab.datasets"].
+
+For forecasts, you can create a GlofasForecast dataset with CDS fields:
+year/month/day/time/leadtime_hour, then call cml.load_source("cds", "cems-glofas-forecast", req) inside.
+
+6) Troubleshooting
+
+Multiple top-level packages discovered during pip install -e .
+Ensure pyproject.toml includes:
+
+[tool.setuptools]
+packages = ["climetlab_glofas_demo"]
+
+
+ImportError (e.g., filelock, tqdm, pyyaml, requests)
+Install the named package (we list the usual ones above).
+
+cfgrib definitions error
+Run Python/uvicorn with:
+
+ECCODES_DEFINITION_PATH=/usr/share/eccodes/definitions
+
+
+403 from CDS/EWDS
+Accept dataset terms in the web UI and check ~/.cdsapirc.
