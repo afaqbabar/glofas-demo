@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 CACHE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "cache"))
 os.makedirs(CACHE, exist_ok=True)
 
-BD_GRIB = os.path.join(CACHE, "glofas-2012_2024_BD.grib")
+PK_GRIB = os.path.join(CACHE, "glofas-2012_2025_PK.grib")
 
-def download_bangladesh_if_missing() -> str:
-    """Download June 2012–2023 Bangladesh GRIB into cache/, idempotent."""
-    if os.path.isfile(BD_GRIB) and os.path.getsize(BD_GRIB) > 0:
-        return BD_GRIB
+def download_pakistan_if_missing() -> str:
+    """Download August 2012–2025 Pakistan GRIB into cache/, idempotent."""
+    if os.path.isfile(PK_GRIB) and os.path.getsize(PK_GRIB) > 0:
+        return PK_GRIB
     c = cdsapi.Client()
     c.retrieve(
         "cems-glofas-historical",
@@ -20,20 +20,22 @@ def download_bangladesh_if_missing() -> str:
             "hydrological_model": ["lisflood"],
             "product_type": ["consolidated"],
             "variable": ["river_discharge_in_the_last_24_hours"],
-            "hyear": [f"{y}" for y in range(2012, 2024)],
-            "hmonth": ["06"],
+            "hyear": [f"{y}" for y in range(2012, 2025)],
+            "hmonth": ["08"],
             "hday": [f"{d:02d}" for d in range(1, 31)],
             "data_format": "grib2",
             "download_format": "unarchived",
-            "area": [30, 85, 20, 95]  # N,W,S,E (Bangladesh bbox)
+            #"area": [30, 85, 20, 95]  # N,W,S,E (Bangladesh bbox)
+            #"area": [37, 68, 6, 97]  # N,W,S,E (India bbox)
+            "area": [37.5, 60.0, 23.0, 77.5] # N,W,S,E (Pakistan bbox)
         }
-    ).download(BD_GRIB)
-    return BD_GRIB
+    ).download(PK_GRIB)
+    return PK_GRIB
 
 def _pick_var(ds):
     return "dis24" if "dis24" in ds.data_vars else ("mdis24" if "mdis24" in ds.data_vars else list(ds.data_vars)[0])
 
-def make_overview_maps(input_path: str = BD_GRIB, target_year: int = 2024):
+def make_overview_maps(input_path: str = PK_GRIB, target_year: int = 2025):
     """Create two PNGs in cache/ and return their absolute paths."""
     ds = xr.open_dataset(input_path, engine="cfgrib")
     var = _pick_var(ds)
@@ -42,15 +44,15 @@ def make_overview_maps(input_path: str = BD_GRIB, target_year: int = 2024):
 
     # 1) Mean across all times in the file
     mean_all = ds[var].mean(dim="time")
-    out1 = os.path.join(CACHE, "mean_june_all_years.png")
+    out1 = os.path.join(CACHE, "mean_august_all_years.png")
     plt.figure(figsize=(7.8, 6))
     im = plt.pcolormesh(LON, LAT, mean_all.values, shading="auto")
-    cb = plt.colorbar(im, shrink=0.85); cb.set_label("Mean discharge (m³/s, June)")
-    plt.title("GloFAS (historical) — Bangladesh\nMean June discharge (2012–2024)")
+    cb = plt.colorbar(im, shrink=0.85); cb.set_label("Mean discharge (m³/s, August)")
+    plt.title("GloFAS (historical) — Pakistan\nMean August discharge (2012–2025)")
     plt.xlabel("Lon"); plt.ylabel("Lat"); plt.tight_layout()
     plt.savefig(out1, dpi=150); plt.close()
 
-    # 2) Triptych: q95 (2012–2021), June target_year mean, exceedance fraction
+    # 2) Triptych: q95 (2012–2021), August target_year mean, exceedance fraction
     is_tgt = ds["time"].dt.year == target_year
     if is_tgt.sum().item() == 0:
         ds.close()
@@ -69,13 +71,13 @@ def make_overview_maps(input_path: str = BD_GRIB, target_year: int = 2024):
 
     im1 = axes[1].pcolormesh(LON, LAT, jun_mean.values, shading="auto")
     fig.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04).set_label("m³/s")
-    axes[1].set_title(f"June {target_year} mean"); axes[1].set_xlabel("Lon"); axes[1].set_ylabel("Lat")
+    axes[1].set_title(f"August {target_year} mean"); axes[1].set_xlabel("Lon"); axes[1].set_ylabel("Lat")
 
     im2 = axes[2].pcolormesh(LON, LAT, exceed.values, shading="auto", vmin=0, vmax=1)
     fig.colorbar(im2, ax=axes[2], fraction=0.046, pad=0.04).set_label("Fraction of days")
-    axes[2].set_title(f"June {target_year} exceedance of q95"); axes[2].set_xlabel("Lon"); axes[2].set_ylabel("Lat")
+    axes[2].set_title(f"August {target_year} exceedance of q95"); axes[2].set_xlabel("Lon"); axes[2].set_ylabel("Lat")
 
-    plt.suptitle("GloFAS Bangladesh — overview", y=1.02)
+    plt.suptitle("GloFAS Pakistan — overview", y=1.02)
     plt.savefig(out2, dpi=150); plt.close()
     ds.close()
     return {"mean_png": out1, "triptych_png": out2}

@@ -3,12 +3,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 import os
-from .glofas_demo import download_bangladesh_if_missing, make_overview_maps, CACHE, BD_GRIB
+from .glofas_demo import download_pakistan_if_missing, make_overview_maps, CACHE, PK_GRIB
 
-app = FastAPI(title="GloFAS Bangladesh Demo API", version="0.1.0")
+app = FastAPI(title="GloFAS Pakistan Demo API", version="0.1.0")
 
 class OverviewReq(BaseModel):
-    target_year: int = 2023
+    target_year: int = 2025
     # show None in the docs instead of "string", and treat "string" as empty
     input_path: str | None = Field(default=None, examples=[None])
 
@@ -19,7 +19,7 @@ def health():
 @app.post("/download")
 def download():
     try:
-        path = download_bangladesh_if_missing()
+        path = download_pakistan_if_missing()
         size = os.path.getsize(path) if os.path.exists(path) else 0
         return {"downloaded": os.path.exists(path) and size > 0, "path": path, "size_bytes": size}
     except Exception as e:
@@ -36,12 +36,12 @@ def overview(req: OverviewReq):
     path = req.input_path
     if path in (None, "", "string"):
         # ensure the canonical GRIB exists
-        if not os.path.exists(BD_GRIB):
+        if not os.path.exists(PK_GRIB):
             try:
-                download_bangladesh_if_missing()
+                download_pakistan_if_missing()
             except Exception as e:
                 raise HTTPException(500, f"Auto-download failed: {e}")
-        path = BD_GRIB
+        path = PK_GRIB
 
     if not os.path.exists(path):
         raise HTTPException(404, f"Input GRIB not found: {path}")
