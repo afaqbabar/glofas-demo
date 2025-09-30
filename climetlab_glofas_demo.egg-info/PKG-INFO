@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: climetlab-glofas-demo
+Version: 0.0.1
+Summary: CliMetLab dataset helpers for GloFAS tiles used in glofas-demo
+Requires-Python: >=3.9

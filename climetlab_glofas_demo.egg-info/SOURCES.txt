@@ -1,0 +1,8 @@
+README
+pyproject.toml
+climetlab_glofas_demo/__init__.py
+climetlab_glofas_demo.egg-info/PKG-INFO
+climetlab_glofas_demo.egg-info/SOURCES.txt
+climetlab_glofas_demo.egg-info/dependency_links.txt
+climetlab_glofas_demo.egg-info/entry_points.txt
+climetlab_glofas_demo.egg-info/top_level.txt
