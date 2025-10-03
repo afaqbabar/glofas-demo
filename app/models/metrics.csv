@@ -1,0 +1,4 @@
+name,rmse,r2,path
+linreg,4.539865129047516,0.8728247342216321,app/models/linreg.joblib
+rf,6.335166868924362,0.75235311510367,app/models/rf.joblib
+xgb,6.526781223423054,0.7371458411216736,app/models/xgb.joblib
